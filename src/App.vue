@@ -1,15 +1,26 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png" />
-  <HelloWorld msg="Welcome to Your Vue.js App" />
+  <div>
+  <h3>
+    Tic Tac Toe: Game of the Year Edition
+  </h3>
+  <TicTacToe />
+
+  </div>
+
 </template>
 
 <script>
-import HelloWorld from "./components/HelloWorld.vue";
-
+import TicTacToe from './components/TicTacToe';
 export default {
   name: "App",
   components: {
-    HelloWorld,
+    TicTacToe,
+  },
+  methods: {
+    increment() {
+      console.log("test")
+      this.$store.commit('increment')
+    }
   },
 };
 </script>
