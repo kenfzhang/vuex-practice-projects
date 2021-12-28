@@ -4,17 +4,22 @@
     Tic Tac Toe: Game of the Year Edition
   </h3>
   <TicTacToe />
-
+  <ConnectFour />
+  <ChessBoard />
   </div>
 
 </template>
 
 <script>
 import TicTacToe from './components/TicTacToe';
+import ChessBoard from './components/ChessBoard';
+import ConnectFour from './components/ConnectFour';
 export default {
   name: "App",
   components: {
     TicTacToe,
+    ChessBoard,
+    ConnectFour
   },
   methods: {
     increment() {
