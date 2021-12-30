@@ -3,6 +3,12 @@ import { determineMoves } from "./chesshelpers.js";
 import { checkWin } from "./helpers.js";
 import { checkC4Win } from "./helpers.js";
 import { determineUnoccupied } from "./helpers.js";
+import { isInCheck } from "./chesshelpers.js";
+import { isInMate } from "./chesshelpers.js";
+// import { getTeam } from "./chesshelpers.js";
+import { getOpposingTeam } from "./chesshelpers.js";
+
+// TODO: implement getting-out-of-check
 
 const pineapple = createStore({
   state() {
@@ -29,7 +35,15 @@ const pineapple = createStore({
 
       // chess state: unselected, selected
       chessState: "unselected",
-      chessTurn: false,
+      // index 0 is white, index 1 is black
+      chessKingLocations: {
+        b: [0, 4],
+        w: [4, 5],
+      },
+      // chess endgame: none, check-w, checkmate-w, stalemate-w
+      // stalemate-b, check-b, checkmate-b
+      chessEndgame: "none",
+      chessTurn: "w",
       chessMoves: [
         ["", "", "", "", "", "", "", ""],
         ["", "", "", "", "", "", "", ""],
@@ -65,8 +79,8 @@ const pineapple = createStore({
         ],
         ["", "", "", "", "", "", "", ""],
         ["", "", "", "", "", "", "", ""],
-        ["", "", "", "", "", "", "", ""],
-        ["", "", "", "", "", "", "", ""],
+        ["", "", "rook-b", "", "", "king-w", "", ""],
+        ["", "", "", "", "rook-w", "", "", ""],
         [
           "pawn-w",
           "pawn-w",
@@ -104,7 +118,6 @@ const pineapple = createStore({
     makeC4Move(state, index) {
       // TODO: update w/ keeping track of height
       // given index, determine lowest unoccupied space
-      console.log(state.c4gameOngoing);
       if (state.c4gameOngoing) {
         const unocc = determineUnoccupied(state.c4board, index);
         // put a token there depending on whose turn
@@ -116,7 +129,7 @@ const pineapple = createStore({
       }
     },
     selectPiece(state, { piecename, x, y }) {
-      console.log("DOES THIS HAPPEN FIRST?");
+      // console.log("DOES THIS HAPPEN FIRST?");
       const moves = determineMoves(piecename, x, y, state.chessboard);
       if (moves.length > 0) {
         state.chessState = "selected";
@@ -138,7 +151,7 @@ const pineapple = createStore({
     movePiece(state, { x, y }) {
       // x,y are destination
       // if empty, just swap contents
-      console.log("DOES THIS HAPPEN SECOND?");
+      // console.log("DOES THIS HAPPEN SECOND?");
 
       if (state.chessState === "selected") {
         const temp =
@@ -149,8 +162,94 @@ const pineapple = createStore({
       // if opponent-occupied, replace dest. with piece
       // then clear origin
     },
-    squareClicked(state, { piecename, x, y }) {
+    squareClicked(state, { piecename, x, y, validity }) {
       console.log(state, piecename, x, y);
+      // piece unselected
+      if (state.chessState === "unselected") {
+        // if clicked on a piece while unselected
+
+        // does clicked piece match whose turn it is?
+
+        if (piecename) {
+          if (piecename[piecename.length - 1] === state.chessTurn) {
+            const moves = determineMoves(piecename, x, y, state.chessboard);
+            if (moves.length > 0) {
+              state.chessState = "selected";
+              state.chessMoveSquares = moves;
+              state.chessSelectedPiece = [x, y];
+              for (const m of moves) {
+                state.chessMoves[m[0]][m[1]] = "selectable";
+              }
+            }
+          } else {
+            console.log("ain't your turn WeirdChamp");
+          }
+        }
+      } else {
+        if (validity) {
+          console.log("MOVE HERE!!!!", x, y);
+          console.log(state.chessSelectedPiece);
+          // moving to an unocc. space
+          if (!state.chessboard[x][y]) {
+            const temp =
+              state.chessboard[state.chessSelectedPiece[0]][
+                state.chessSelectedPiece[1]
+              ];
+            state.chessboard[state.chessSelectedPiece[0]][
+              state.chessSelectedPiece[1]
+            ] = "";
+            state.chessboard[x][y] = temp;
+          } else {
+            console.log("PLS RUN");
+            state.chessboard[x][y] =
+              state.chessboard[state.chessSelectedPiece[0]][
+                state.chessSelectedPiece[1]
+              ];
+            state.chessboard[state.chessSelectedPiece[0]][
+              state.chessSelectedPiece[1]
+            ] = "";
+          }
+
+          if (state.chessboard[x][y] === "pawn-b") {
+            state.chessboard[x][y] = "pawn-moved-b";
+          } else if (state.chessboard[x][y] === "pawn-w") {
+            state.chessboard[x][y] = "pawn-moved-w";
+          }
+
+          state.chessState = "unselected";
+          for (const m of state.chessMoveSquares) {
+            state.chessMoves[m[0]][m[1]] = "";
+          }
+          state.chessMoveSquares = [];
+          state.chessSelectedPiece = [];
+          state.chessTurn = state.chessTurn === "w" ? "b" : "w";
+
+          // check for check/mate/etc.
+          // TODO: update king location every time king moves
+          // state.chessTurn
+          console.log("?????????????????????");
+          const k_x = state.chessKingLocations[state.chessTurn][0];
+          const k_y = state.chessKingLocations[state.chessTurn][1];
+          if (state.chessEndgame === "none") {
+            if (isInCheck(k_x, k_y, k_x, k_y, state.chessboard)) {
+              state.chessEndgame =
+                "check-" + getOpposingTeam(state.chessboard[k_x][k_y]);
+            }
+
+            if (isInMate(k_x, k_y, state.chessboard)) {
+              if (state.chessEndgame == "check") {
+                state.chessEndgame =
+                  "checkmate-" + getOpposingTeam(state.chessboard[k_x][k_y]);
+                console.log("A WINNER IS YOU!!!! POGGEERS");
+              } else if (state.chessEndgame == "none") {
+                state.chessEndgame =
+                  "stalemate-" + getOpposingTeam(state.chessboard[k_x][k_y]);
+              }
+            }
+          }
+          console.log(state.chessEndgame);
+        }
+      }
     },
   },
 });

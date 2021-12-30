@@ -4,7 +4,9 @@ export function determineMoves(piecetype, x, y, chessboard) {
     case "bishop-w":
       return diagonalMoves(piecetype, x, y, chessboard);
     case "pawn-b":
+    case "pawn-moved-b":
     case "pawn-w":
+    case "pawn-moved-w":
       return pawnMoves(piecetype, x, y, chessboard);
     case "knight-b":
     case "knight-w":
@@ -24,12 +26,127 @@ export function determineMoves(piecetype, x, y, chessboard) {
   return;
 }
 
-// function checkValid(x, y, chessboard) {
+// test all possible king moves, check if they end in check
+// this will be used for checkmate and stalemate
+// for(all moves) isInCheck?
+export function isInMate(k_x, k_y, chessboard) {
+  const offsets = [
+    [-1, -1],
+    [-1, 0],
+    [-1, 1],
+    [0, -1],
+    [0, 1],
+    [1, -1],
+    [1, 0],
+    [1, 1],
+  ];
 
-// }
+  const kingTeam = getTeam(chessboard[k_x][k_y]);
 
-function getTeam(piecetype) {
+  for (const o of offsets) {
+    if (inBounds(k_x + o[0], k_y + o[1])) {
+      if (!getTeam(chessboard[k_x + o[0]][k_y + o[1]]) === kingTeam) {
+        if (!isInCheck(k_x, k_y, k_x + o[0], k_y + o[1], chessboard)) {
+          return false;
+        }
+      }
+    }
+  }
+
+  return true;
+}
+
+// checks if the given board config causes
+// the king to be in check
+export function isInCheck(k_x, k_y, x, y, chessboard) {
+  // determine what team the king is on
+  const piecetype = chessboard[k_x][k_y];
+  // const k_team = getTeam(chessboard[k_x][k_y]);
+
+  // loop thru all opposing pieces, check ranges of movement
+  // see if king is in it
+  var tempChessboard = [];
+  for (var k = 0; k < chessboard.length; k++) {
+    tempChessboard.push([]);
+  }
+  for (var i = 0; i < chessboard.length; i++) {
+    for (var j = 0; j < chessboard[i].length; j++) {
+      tempChessboard[i].push(chessboard[i][j]);
+    }
+  }
+  tempChessboard[k_x][k_y] = "";
+
+  // check lateral squares
+  const lateralThreatRange = lateralMoves(piecetype, x, y, tempChessboard);
+  for (const r of lateralThreatRange) {
+    if (
+      chessboard[r[0]][r[1]] === "rook-" + getOpposingTeam(piecetype) ||
+      chessboard[r[0]][r[1]] === "queen-" + getOpposingTeam(piecetype)
+    ) {
+      return true;
+    }
+  }
+  // check diagonal squares
+  const diagonalThreatRange = diagonalMoves(piecetype, x, y, tempChessboard);
+
+  for (const r of diagonalThreatRange) {
+    if (
+      chessboard[r[0]][r[1]] === "bishop-" + getOpposingTeam(piecetype) ||
+      chessboard[r[0]][r[1]] === "queen-" + getOpposingTeam(piecetype)
+    ) {
+      return true;
+    }
+  }
+  // check knight-move squares
+  const knightThreatRange = knightMoves(piecetype, x, y, chessboard);
+
+  for (const r of knightThreatRange) {
+    if (chessboard[r[0]][r[1]] === "knight-" + getOpposingTeam(piecetype)) {
+      return true;
+    }
+  }
+
+  // check pawn squares
+
+  const pawnThreatRange = pawnMoves(
+    "pawn-" + getTeam(piecetype),
+    x,
+    y,
+    chessboard
+  );
+
+  for (const r of pawnThreatRange) {
+    if (chessboard[r[0]][r[1]] === "pawn-" + getOpposingTeam(piecetype)) {
+      return true;
+    }
+  }
+
+  const pawnMovedThreatRange = pawnMoves(
+    "pawn-moved-" + getTeam(piecetype),
+    x,
+    y,
+    chessboard
+  );
+
+  for (const r of pawnMovedThreatRange) {
+    if (chessboard[r[0]][r[1]] === "pawn-moved-" + getOpposingTeam(piecetype)) {
+      return true;
+    }
+  }
+  // check opposing king squares
+
+  return false;
+}
+
+export function getTeam(piecetype) {
+  if (!piecetype) {
+    return "";
+  }
   return piecetype[piecetype.length - 1];
+}
+
+export function getOpposingTeam(piecetype) {
+  return piecetype[piecetype.length - 1] === "w" ? "b" : "w";
 }
 
 function inBounds(i, j) {
@@ -117,7 +234,6 @@ function diagonalMoves(piecetype, x, y, chessboard) {
     i = x + d_i;
     j = y + d_j;
     while (i >= 0 && i < 8 && j >= 0 && j < 8) {
-      console.log(chessboard[i][j]);
       const c = chessboard[i][j];
       if (!c) {
         validMoves.push([i, j]);
@@ -158,7 +274,6 @@ function lateralMoves(piecetype, x, y, chessboard) {
     i = x + d_i;
     j = y + d_j;
     while (i >= 0 && i < 8 && j >= 0 && j < 8) {
-      console.log(chessboard[i][j]);
       const c = chessboard[i][j];
       if (!c) {
         validMoves.push([i, j]);
@@ -173,8 +288,6 @@ function lateralMoves(piecetype, x, y, chessboard) {
     }
   }
 
-  console.log("VALID MOOOOVES");
-  console.log(validMoves);
   return validMoves;
 }
 
@@ -265,29 +378,6 @@ function pawnMoves(piecetype, x, y, chessboard) {
     }
   }
 
-  // unmoved pawn
-  // if (piecetype.length <= 6) {
-  //   if (piecetype[5] === "b") {
-  //     if (!chessboard[x + 2][y]) {
-  //       validMoves.push([x + 2, y]);
-  //     }
-  //   } else if (piecetype[5] === "w") {
-  //     if (!chessboard[x - 2][y]) {
-  //       validMoves.push([x - 2, y]);
-  //     }
-  //   }
-  // }
-
-  // if (piecetype[5] === "b") {
-  //   if (!chessboard[x + 1][y]) {
-  //     validMoves.push([x + 1, y]);
-  //   }
-  // } else if (piecetype[5] === "w") {
-  //   if (!chessboard[x - 1][y]) {
-  //     validMoves.push([x - 1, y]);
-  //   }
-  // }
-  console.log(validMoves);
   return validMoves;
 }
 
@@ -315,9 +405,11 @@ function kingMoves(piecetype, x, y, chessboard) {
     i = x + o[0];
     j = y + o[1];
     if (inBounds(i, j)) {
-      if (isOccupiedByOpponent(piecetype, i, j, chessboard)) {
-        validMoves.push([i, j]);
-      } else if (!chessboard[i][j]) {
+      if (
+        (isOccupiedByOpponent(piecetype, i, j, chessboard) ||
+          !chessboard[i][j]) &&
+        !isInCheck(x, y, i, j, chessboard)
+      ) {
         validMoves.push([i, j]);
       }
     }

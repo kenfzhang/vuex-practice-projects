@@ -2,13 +2,20 @@
   <div>
     <h3>Chess Board</h3>
     <div class="chessboard">
+      <div class="turn">
+        {{
+          (this.$store.state.chessTurn === "w" ? "white" : "black") + "'s turn!"
+        }}
+      </div>
       <table class="board">
         <tr v-for="(row, x) in this.$store.state.chessboard" :key="row.id">
           <td
             :class="{ selectable: this.$store.state.chessMoves[x][y] }"
             v-for="(square, y) in row"
             :key="square.id"
-            @click="movePiece(x, y)"
+            @click="
+              selectSquare(square, x, y, this.$store.state.chessMoves[x][y])
+            "
           >
             <!-- {{ square }} -->
             <img
@@ -17,7 +24,6 @@
                 square ? require('@/assets/chesspieces/' + square + '.png') : ''
               "
               alt=""
-              @click="selectPiece(square, x, y)"
             />
           </td>
         </tr>
@@ -61,6 +67,9 @@ export default {
       console.log("POGGERS", x, y);
       this.$store.commit("movePiece", { x, y });
     },
+    selectSquare(piecename, x, y, validity) {
+      this.$store.commit("squareClicked", { piecename, x, y, validity });
+    },
   },
 };
 </script>
@@ -80,7 +89,7 @@ export default {
   justify-content: center;
 }
 .selectable {
-  background-color: #008 !important;
+  background-color: rgb(45, 45, 191) !important;
 }
 
 tr td {
