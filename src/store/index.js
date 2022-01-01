@@ -5,10 +5,7 @@ import { checkC4Win } from "./helpers.js";
 import { determineUnoccupied } from "./helpers.js";
 import { isInCheck } from "./chesshelpers.js";
 import { isInMate } from "./chesshelpers.js";
-// import { getTeam } from "./chesshelpers.js";
 import { getOpposingTeam } from "./chesshelpers.js";
-
-// TODO: implement getting-out-of-check
 
 const pineapple = createStore({
   state() {
@@ -38,7 +35,7 @@ const pineapple = createStore({
       // index 0 is white, index 1 is black
       chessKingLocations: {
         b: [0, 4],
-        w: [4, 5],
+        w: [7, 4],
       },
       // chess endgame: none, check-w, checkmate-w, stalemate-w
       // stalemate-b, check-b, checkmate-b
@@ -79,8 +76,8 @@ const pineapple = createStore({
         ],
         ["", "", "", "", "", "", "", ""],
         ["", "", "", "", "", "", "", ""],
-        ["", "", "rook-b", "", "", "king-w", "", ""],
-        ["", "", "", "", "rook-w", "", "", ""],
+        ["", "", "", "", "", "", "", ""],
+        ["", "", "", "", "", "", "", ""],
         [
           "pawn-w",
           "pawn-w",
@@ -116,7 +113,6 @@ const pineapple = createStore({
       }
     },
     makeC4Move(state, index) {
-      // TODO: update w/ keeping track of height
       // given index, determine lowest unoccupied space
       if (state.c4gameOngoing) {
         const unocc = determineUnoccupied(state.c4board, index);
@@ -125,7 +121,6 @@ const pineapple = createStore({
         state.c4turn = !state.c4turn;
 
         state.c4gameOngoing = checkC4Win(state.c4board, unocc, index);
-        // console.log(state,index)
       }
     },
     selectPiece(state, { piecename, x, y }) {
@@ -163,7 +158,6 @@ const pineapple = createStore({
       // then clear origin
     },
     squareClicked(state, { piecename, x, y, validity }) {
-      console.log(state, piecename, x, y);
       // piece unselected
       if (state.chessState === "unselected") {
         // if clicked on a piece while unselected
@@ -172,7 +166,14 @@ const pineapple = createStore({
 
         if (piecename) {
           if (piecename[piecename.length - 1] === state.chessTurn) {
-            const moves = determineMoves(piecename, x, y, state.chessboard);
+            const moves = determineMoves(
+              piecename,
+              x,
+              y,
+              state.chessKingLocations[state.chessTurn][0],
+              state.chessKingLocations[state.chessTurn][1],
+              state.chessboard
+            );
             if (moves.length > 0) {
               state.chessState = "selected";
               state.chessMoveSquares = moves;
@@ -181,14 +182,10 @@ const pineapple = createStore({
                 state.chessMoves[m[0]][m[1]] = "selectable";
               }
             }
-          } else {
-            console.log("ain't your turn WeirdChamp");
           }
         }
       } else {
         if (validity) {
-          console.log("MOVE HERE!!!!", x, y);
-          console.log(state.chessSelectedPiece);
           // moving to an unocc. space
           if (!state.chessboard[x][y]) {
             const temp =
@@ -200,7 +197,6 @@ const pineapple = createStore({
             ] = "";
             state.chessboard[x][y] = temp;
           } else {
-            console.log("PLS RUN");
             state.chessboard[x][y] =
               state.chessboard[state.chessSelectedPiece[0]][
                 state.chessSelectedPiece[1]
@@ -208,6 +204,12 @@ const pineapple = createStore({
             state.chessboard[state.chessSelectedPiece[0]][
               state.chessSelectedPiece[1]
             ] = "";
+          }
+
+          if (state.chessboard[x][y] === "king-b") {
+            state.chessKingLocations["b"] = [x, y];
+          } else if (state.chessboard[x][y] === "king-w") {
+            state.chessKingLocations["w"] = [x, y];
           }
 
           if (state.chessboard[x][y] === "pawn-b") {
@@ -225,9 +227,7 @@ const pineapple = createStore({
           state.chessTurn = state.chessTurn === "w" ? "b" : "w";
 
           // check for check/mate/etc.
-          // TODO: update king location every time king moves
           // state.chessTurn
-          console.log("?????????????????????");
           const k_x = state.chessKingLocations[state.chessTurn][0];
           const k_y = state.chessKingLocations[state.chessTurn][1];
           if (state.chessEndgame === "none") {
@@ -247,7 +247,6 @@ const pineapple = createStore({
               }
             }
           }
-          console.log(state.chessEndgame);
         }
       }
     },

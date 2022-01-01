@@ -1,29 +1,52 @@
-export function determineMoves(piecetype, x, y, chessboard) {
+export function determineMoves(piecetype, x, y, k_x, k_y, chessboard) {
   switch (piecetype) {
     case "bishop-b":
     case "bishop-w":
-      return diagonalMoves(piecetype, x, y, chessboard);
+      return diagonalMoves(piecetype, x, y, k_x, k_y, chessboard);
     case "pawn-b":
     case "pawn-moved-b":
     case "pawn-w":
     case "pawn-moved-w":
-      return pawnMoves(piecetype, x, y, chessboard);
+      return pawnMoves(piecetype, x, y, k_x, k_y, chessboard);
     case "knight-b":
     case "knight-w":
-      return knightMoves(piecetype, x, y, chessboard);
+      return knightMoves(piecetype, x, y, k_x, k_y, chessboard);
     case "rook-b":
     case "rook-w":
-      return lateralMoves(piecetype, x, y, chessboard);
+      return lateralMoves(piecetype, x, y, k_x, k_y, chessboard);
     case "queen-b":
     case "queen-w":
-      return queenMoves(piecetype, x, y, chessboard);
+      return queenMoves(piecetype, x, y, k_x, k_y, chessboard);
     case "king-b":
     case "king-w":
-      return kingMoves(piecetype, x, y, chessboard);
+      return kingMoves(piecetype, x, y, k_x, k_y, chessboard);
     default:
       console.log("");
   }
   return;
+}
+
+function tryBoard(x_curr, y_curr, x_next, y_next, chessboard) {
+  var tempChessboard = [];
+  for (var k = 0; k < chessboard.length; k++) {
+    tempChessboard.push([]);
+  }
+  for (var i = 0; i < chessboard.length; i++) {
+    for (var j = 0; j < chessboard[i].length; j++) {
+      tempChessboard[i].push(chessboard[i][j]);
+    }
+  }
+
+  if (!tempChessboard[x_next][y_next]) {
+    const temp = tempChessboard[x_curr][y_curr];
+    tempChessboard[x_curr][y_curr] = "";
+    tempChessboard[x_next][y_next] = temp;
+  } else {
+    tempChessboard[x_next][y_next] = tempChessboard[x_curr][y_curr];
+    tempChessboard[x_curr][y_curr] = "";
+  }
+
+  return tempChessboard;
 }
 
 // test all possible king moves, check if they end in check
@@ -46,7 +69,7 @@ export function isInMate(k_x, k_y, chessboard) {
   for (const o of offsets) {
     if (inBounds(k_x + o[0], k_y + o[1])) {
       if (!getTeam(chessboard[k_x + o[0]][k_y + o[1]]) === kingTeam) {
-        if (!isInCheck(k_x, k_y, k_x + o[0], k_y + o[1], chessboard)) {
+        if (!isInCheck(k_x, k_y, chessboard)) {
           return false;
         }
       }
@@ -58,11 +81,11 @@ export function isInMate(k_x, k_y, chessboard) {
 
 // checks if the given board config causes
 // the king to be in check
-export function isInCheck(k_x, k_y, x, y, chessboard) {
+// k_x, k_y is location of your king
+// x, y is square to test
+export function isInCheck(k_x, k_y, chessboard) {
   // determine what team the king is on
   const piecetype = chessboard[k_x][k_y];
-  // const k_team = getTeam(chessboard[k_x][k_y]);
-
   // loop thru all opposing pieces, check ranges of movement
   // see if king is in it
   var tempChessboard = [];
@@ -77,7 +100,7 @@ export function isInCheck(k_x, k_y, x, y, chessboard) {
   tempChessboard[k_x][k_y] = "";
 
   // check lateral squares
-  const lateralThreatRange = lateralMoves(piecetype, x, y, tempChessboard);
+  const lateralThreatRange = lateralScan(piecetype, k_x, k_y, tempChessboard);
   for (const r of lateralThreatRange) {
     if (
       chessboard[r[0]][r[1]] === "rook-" + getOpposingTeam(piecetype) ||
@@ -87,7 +110,7 @@ export function isInCheck(k_x, k_y, x, y, chessboard) {
     }
   }
   // check diagonal squares
-  const diagonalThreatRange = diagonalMoves(piecetype, x, y, tempChessboard);
+  const diagonalThreatRange = diagonalScan(piecetype, k_x, k_y, tempChessboard);
 
   for (const r of diagonalThreatRange) {
     if (
@@ -98,7 +121,7 @@ export function isInCheck(k_x, k_y, x, y, chessboard) {
     }
   }
   // check knight-move squares
-  const knightThreatRange = knightMoves(piecetype, x, y, chessboard);
+  const knightThreatRange = knightScan(piecetype, k_x, k_y, tempChessboard);
 
   for (const r of knightThreatRange) {
     if (chessboard[r[0]][r[1]] === "knight-" + getOpposingTeam(piecetype)) {
@@ -108,10 +131,10 @@ export function isInCheck(k_x, k_y, x, y, chessboard) {
 
   // check pawn squares
 
-  const pawnThreatRange = pawnMoves(
+  const pawnThreatRange = pawnScan(
     "pawn-" + getTeam(piecetype),
-    x,
-    y,
+    k_x,
+    k_y,
     chessboard
   );
 
@@ -121,10 +144,10 @@ export function isInCheck(k_x, k_y, x, y, chessboard) {
     }
   }
 
-  const pawnMovedThreatRange = pawnMoves(
+  const pawnMovedThreatRange = pawnScan(
     "pawn-moved-" + getTeam(piecetype),
-    x,
-    y,
+    k_x,
+    k_y,
     chessboard
   );
 
@@ -134,6 +157,14 @@ export function isInCheck(k_x, k_y, x, y, chessboard) {
     }
   }
   // check opposing king squares
+
+  const kingThreatRange = kingScan(piecetype, k_x, k_y, tempChessboard);
+
+  for (const r of kingThreatRange) {
+    if (chessboard[r[0]][r[1]] === "king-" + getOpposingTeam(piecetype)) {
+      return true;
+    }
+  }
 
   return false;
 }
@@ -154,14 +185,13 @@ function inBounds(i, j) {
 }
 
 function isOccupiedByOpponent(piecetype, x, y, chessboard) {
+  if (!chessboard[x][y]) {
+    return false;
+  }
   return getTeam(chessboard[x][y]) !== getTeam(piecetype);
 }
 
-// function isOccupiedByAlly(piecetype, x, y, chessboard) {
-//   return (getTeam(chessboard[x][y]) === getTeam(piecetype))
-// }
-
-function knightMoves(piecetype, x, y, chessboard) {
+function knightScan(piecetype, x, y, chessboard) {
   var validMoves = [];
 
   const directions = [
@@ -200,23 +230,36 @@ function knightMoves(piecetype, x, y, chessboard) {
   return validMoves;
 }
 
-// function traverseSquare(chessboard, x, y, i, j ) {
-
-// }
-
-function queenMoves(piecetype, x, y, chessboard) {
+function knightMoves(piecetype, x, y, k_x, k_y, chessboard) {
   var validMoves = [];
-  validMoves = validMoves.concat(diagonalMoves(piecetype, x, y, chessboard));
-  validMoves = validMoves.concat(lateralMoves(piecetype, x, y, chessboard));
+  const moves = knightScan(piecetype, x, y, chessboard);
+  for (const m of moves) {
+    if (!isInCheck(k_x, k_y, tryBoard(x, y, m[0], m[1], chessboard))) {
+      validMoves.push(m);
+    }
+  }
+
   return validMoves;
 }
 
-function diagonalMoves(piecetype, x, y, chessboard) {
+function queenMoves(piecetype, x, y, k_x, k_y, chessboard) {
+  var validMoves = [];
+  var moves = [];
+  moves = moves.concat(diagonalScan(piecetype, x, y, chessboard));
+  moves = moves.concat(lateralScan(piecetype, x, y, chessboard));
+
+  for (const m of moves) {
+    if (!isInCheck(k_x, k_y, tryBoard(x, y, m[0], m[1], chessboard))) {
+      validMoves.push(m);
+    }
+  }
+
+  return validMoves;
+}
+
+function diagonalScan(piecetype, x, y, chessboard) {
   var validMoves = [];
 
-  // search four directions
-  // pseudocode:
-  // traverse until either OOB or another piece
   const directions = [
     [-1, -1],
     [-1, 1],
@@ -251,12 +294,21 @@ function diagonalMoves(piecetype, x, y, chessboard) {
   return validMoves;
 }
 
-function lateralMoves(piecetype, x, y, chessboard) {
+function diagonalMoves(piecetype, x, y, k_x, k_y, chessboard) {
+  var validMoves = [];
+  const moves = diagonalScan(piecetype, x, y, chessboard);
+
+  for (const m of moves) {
+    if (!isInCheck(k_x, k_y, tryBoard(x, y, m[0], m[1], chessboard))) {
+      validMoves.push(m);
+    }
+  }
+  return validMoves;
+}
+
+function lateralScan(piecetype, x, y, chessboard) {
   var validMoves = [];
 
-  // search four directions
-  // pseudocode:
-  // traverse until either OOB or another piece
   const directions = [
     [0, -1],
     [0, 1],
@@ -291,8 +343,20 @@ function lateralMoves(piecetype, x, y, chessboard) {
   return validMoves;
 }
 
+function lateralMoves(piecetype, x, y, k_x, k_y, chessboard) {
+  var validMoves = [];
+  const moves = lateralScan(piecetype, x, y, chessboard);
+
+  for (const m of moves) {
+    if (!isInCheck(k_x, k_y, tryBoard(x, y, m[0], m[1], chessboard))) {
+      validMoves.push(m);
+    }
+  }
+  return validMoves;
+}
+
 // TODO: en passant
-function pawnMoves(piecetype, x, y, chessboard) {
+function pawnScan(piecetype, x, y, chessboard) {
   var validMoves = [];
 
   const offsets_b = [
@@ -381,10 +445,19 @@ function pawnMoves(piecetype, x, y, chessboard) {
   return validMoves;
 }
 
-function kingMoves(piecetype, x, y, chessboard) {
-  // check for check
-  // ^ do this later OMEGALUL
+function pawnMoves(piecetype, x, y, k_x, k_y, chessboard) {
+  var validMoves = [];
+  const moves = pawnScan(piecetype, x, y, chessboard);
 
+  for (const m of moves) {
+    if (!isInCheck(k_x, k_y, tryBoard(x, y, m[0], m[1], chessboard))) {
+      validMoves.push(m);
+    }
+  }
+  return validMoves;
+}
+
+function kingScan(piecetype, x, y, chessboard) {
   var validMoves = [];
 
   const offsets = [
@@ -400,21 +473,31 @@ function kingMoves(piecetype, x, y, chessboard) {
 
   var i;
   var j;
-
+  console.log(chessboard);
   for (const o of offsets) {
     i = x + o[0];
     j = y + o[1];
     if (inBounds(i, j)) {
       if (
-        (isOccupiedByOpponent(piecetype, i, j, chessboard) ||
-          !chessboard[i][j]) &&
-        !isInCheck(x, y, i, j, chessboard)
+        isOccupiedByOpponent(piecetype, i, j, chessboard) ||
+        !chessboard[i][j]
       ) {
         validMoves.push([i, j]);
       }
     }
   }
 
-  // ???????
+  return validMoves;
+}
+
+function kingMoves(piecetype, x, y, k_x, k_y, chessboard) {
+  var validMoves = [];
+  const moves = kingScan(piecetype, x, y, chessboard);
+
+  for (const m of moves) {
+    if (!isInCheck(m[0], m[1], tryBoard(x, y, m[0], m[1], chessboard))) {
+      validMoves.push(m);
+    }
+  }
   return validMoves;
 }

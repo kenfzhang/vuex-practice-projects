@@ -7,6 +7,24 @@
           (this.$store.state.chessTurn === "w" ? "white" : "black") + "'s turn!"
         }}
       </div>
+      <div v-if="this.$store.state.chessEndgame === 'checkmate-w'">
+        white wins!
+      </div>
+      <div v-else-if="this.$store.state.chessEndgame === 'checkmate-b'">
+        black wins!
+      </div>
+      <div
+        v-else-if="
+          this.$store.state.chessEndgame === 'stalemate-w' ||
+          this.$store.state.chessEndgame === 'stalemate-b'
+        "
+      >
+        we'll call it a tie.
+        <img
+          src="https://static-cdn.jtvnw.net/emoticons/v2/25/default/light/1.0"
+          alt="kappa"
+        />
+      </div>
       <table class="board">
         <tr v-for="(row, x) in this.$store.state.chessboard" :key="row.id">
           <td
@@ -69,6 +87,9 @@ export default {
     },
     selectSquare(piecename, x, y, validity) {
       this.$store.commit("squareClicked", { piecename, x, y, validity });
+    },
+    idToFilename(piecename) {
+      return piecename.slice(0, piecename.length - 2);
     },
   },
 };
