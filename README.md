@@ -1,4 +1,4 @@
-# dingus
+# vuex-practice-projects
 
 ## Project setup
 ```
