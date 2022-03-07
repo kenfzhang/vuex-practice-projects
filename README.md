@@ -1,5 +1,8 @@
 # vuex-practice-projects
 
+## About
+This repository contains a Vue.js implementation of the games Tic-Tac-Toe, Connect Four, and Chess.
+
 ## Project setup
 ```
 npm install
