@@ -2,7 +2,7 @@
 
 ## About
 This repository contains a Vue.js implementation of the games Tic-Tac-Toe, Connect Four, and Chess.
-Vuex was used for game state management. Chess piece sprites were drawn by me.
+Vuex was used for game state management. Game logic was implemented in Vuex. Chess piece sprites were drawn by me.
 
 <img src="https://raw.githubusercontent.com/kenfzhang/vuex-practice-projects/main/sample.gif" alt="drawing" width="640"/>
 
